@@ -27,7 +27,9 @@ test("browse, filter, publish and reserve a single item through the real API", a
   await page.getByLabel(/^Email/).fill("maya@example.test");
   await page.getByLabel(/^Password/).fill("CampusDemo123!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Sign out · Maya" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Sign out · Maya" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "+ List an item" }).click();
   const title = "Browser-tested lamp " + Date.now();
   await page.getByLabel("Item title").fill(title);
@@ -87,6 +89,9 @@ test("browse, filter, publish and reserve a single item through the real API", a
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Good finds. Closer to home." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Oak study desk" }),
   ).toBeVisible();
   await expect
     .poll(() =>
