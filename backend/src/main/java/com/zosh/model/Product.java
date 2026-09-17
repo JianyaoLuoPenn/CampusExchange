@@ -42,6 +42,7 @@ public class Product {
     private String color;
 
     @ElementCollection
+    @Column(length = 1000)
     private List<String> images =new ArrayList<>();
 
     private int numRatings;

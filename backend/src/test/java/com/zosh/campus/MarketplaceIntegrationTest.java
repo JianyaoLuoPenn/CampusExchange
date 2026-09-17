@@ -25,7 +25,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(properties = {"campus.sweep-ms=3600000", "campus.demo=false"})
+@SpringBootTest(
+    properties = {
+      "campus.sweep-ms=3600000",
+      "campus.demo=false",
+      "campus.frontend-url=http://localhost:5173"
+    })
 @AutoConfigureMockMvc
 class MarketplaceIntegrationTest {
   @DynamicPropertySource
@@ -452,5 +457,89 @@ class MarketplaceIntegrationTest {
     assertThat(market.cancel(buyer, r.id()).paymentState()).isEqualTo("UNPAID");
     market.refundOne(r.id());
     verify(gateway, never()).refund(any());
+  }
+
+  @Test
+  void modeSwitchCannotCreateRealCheckoutForMockReservation() {
+    Booking r = reserve(listing(1000), buyer);
+    when(gateway.mode()).thenReturn("stripe");
+    assertThatThrownBy(() -> market.checkout(buyer, r.id())).hasMessageContaining("409");
+    verify(gateway, never()).checkout(any());
+  }
+
+  @Test
+  void modeSwitchCannotCreateMockCheckoutForStripeReservation() {
+    Booking r = reserve(listing(1000), buyer);
+    stripe(r.id());
+    assertThatThrownBy(() -> market.checkout(buyer, r.id())).hasMessageContaining("409");
+    verify(gateway, never()).checkout(any());
+  }
+
+  @Test
+  void stripeMinimumIsValidatedBeforeCreatingAnUnpayableListing() {
+    when(gateway.mode()).thenReturn("stripe");
+    assertThatThrownBy(() -> listing(49)).hasMessageContaining("$0.50");
+    assertThat(listing(50).depositCents()).isEqualTo(50);
+    when(gateway.mode()).thenReturn("mock");
+    assertThat(listing(1).depositCents()).isEqualTo(1);
+  }
+
+  @Test
+  void longHttpsPhotoUrlFitsTheDatabaseColumn() {
+    String url = "https://example.test/photo?token=" + "a".repeat(400);
+    Listing p =
+        market.publish(
+            seller,
+            new ListingInput(
+                "Desk",
+                "Used",
+                "Furniture",
+                "Good",
+                "North Campus",
+                "Maple Court",
+                "Lobby",
+                "PRIVATE UNIT 9",
+                6500,
+                0,
+                List.of(now.plusSeconds(7200)),
+                List.of(url)));
+    assertThat(market.details(p.id()).images()).containsExactly(url);
+  }
+
+  @Test
+  void nullImageAndFractionalCentsAreRejectedAtTheBoundary() throws Exception {
+    String payload =
+        "{\"title\":\"Desk\",\"description\":\"Used\",\"category\":\"Furniture\",\"condition\":\"Good\",\"campus\":\"North"
+            + " Campus\",\"apartment\":\"Maple"
+            + " Court\",\"pickupArea\":\"Lobby\",\"pickupAddress\":\"Private\",\"priceCents\":6500,\"depositCents\":0,\"pickupSlots\":[\"2030-01-02T12:00:00Z\"],\"images\":[null]}";
+    mvc.perform(
+            post("/api/campus/listings")
+                .with(user(seller))
+                .contentType("application/json")
+                .content(payload))
+        .andExpect(status().isBadRequest());
+    mvc.perform(
+            post("/api/campus/listings")
+                .with(user(seller))
+                .contentType("application/json")
+                .content(payload.replace("[null]", "[]").replace(":6500", ":6500.5")))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void bothLoopbackBrowserOriginsWorkButUnrelatedOriginsAreDenied() throws Exception {
+    for (String origin : List.of("http://localhost:5173", "http://127.0.0.1:5173")) {
+      mvc.perform(
+              options("/api/campus/auth/login")
+                  .header("Origin", origin)
+                  .header("Access-Control-Request-Method", "POST"))
+          .andExpect(status().isOk())
+          .andExpect(header().string("Access-Control-Allow-Origin", origin));
+    }
+    mvc.perform(
+            options("/api/campus/auth/login")
+                .header("Origin", "https://unrelated.example")
+                .header("Access-Control-Request-Method", "POST"))
+        .andExpect(status().isForbidden());
   }
 }

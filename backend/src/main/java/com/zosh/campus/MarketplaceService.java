@@ -153,6 +153,10 @@ public class MarketplaceService {
     if (!CATEGORIES.contains(in.category()) || !CONDITIONS.contains(in.condition()))
       throw error(400, "Choose a supported category and condition");
     if (in.depositCents() > in.priceCents()) throw error(400, "Deposit cannot exceed the price");
+    if ("stripe".equals(gateway.mode())
+        && in.depositCents() > 0
+        && (in.depositCents() < 50 || in.depositCents() > 99999999))
+      throw error(400, "Stripe USD deposits must be between $0.50 and $999,999.99");
     if (in.pickupSlots().stream().anyMatch(t -> !t.isAfter(clock.instant()))
         || new HashSet<>(in.pickupSlots()).size() != in.pickupSlots().size())
       throw error(400, "Pickup slots must be distinct future times");
@@ -320,6 +324,8 @@ public class MarketplaceService {
       throw error(403, "Only the buyer can pay");
     expire(r);
     if (r.getStatus() != PENDING_PAYMENT) return booking(r);
+    if (!Objects.equals(r.getPaymentMode(), gateway.mode()))
+      throw error(409, "Payment mode changed. Cancel this unpaid reservation and reserve again.");
     if (r.getCheckoutId() == null) {
       DepositGateway.Checkout result = gateway.checkout(r);
       r.setCheckoutId(result.id());

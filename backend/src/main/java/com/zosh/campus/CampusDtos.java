@@ -19,7 +19,7 @@ public final class CampusDtos {
       @Min(1) @Max(100000000) long priceCents,
       @Min(0) long depositCents,
       @NotEmpty @Size(max = 20) List<@NotNull Instant> pickupSlots,
-      @Size(max = 5) List<@Size(max = 1000) String> images) {}
+      @Size(max = 5) List<@NotBlank @Size(max = 1000) String> images) {}
 
   public record Listing(
       Long id,

@@ -70,6 +70,8 @@ public class DepositGateway {
   public record RefundResult(String id, String status) {}
 
   public Checkout checkout(Reservation r) {
+    if (!mode.equals(r.getPaymentMode()))
+      throw MarketplaceService.error(409, "Reservation payment mode does not match the server");
     if (mode.equals("mock")) return new Checkout("mock_cs_" + r.getId(), null);
     try {
       SessionCreateParams params =
@@ -150,6 +152,12 @@ public class DepositGateway {
                       .build(),
                   options("campus-refund-" + r.getId() + "-" + r.getRefundAttempt()));
       return new RefundResult(refund.getId(), refund.getStatus());
+    } catch (com.stripe.exception.InvalidRequestException e) {
+      // A rejected new request is a definite failure, not an unknown network outcome.
+      // Preserve an already-created refund's pending state if retrieving it fails.
+      if (r.getRefundId() == null && Integer.valueOf(400).equals(e.getStatusCode()))
+        return new RefundResult(null, "failed");
+      throw new IllegalStateException("Refund request needs reconciliation", e);
     } catch (Exception e) {
       throw new IllegalStateException("Refund request needs reconciliation", e);
     }

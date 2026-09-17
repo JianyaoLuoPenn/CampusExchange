@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -15,6 +15,13 @@ import { categories, conditions, cancellation } from "../../../campus/types";
 export default function Publish() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [minimumDeposit, setMinimumDeposit] = useState(1);
+  useEffect(() => {
+    api
+      .get("/config")
+      .then((r) => setMinimumDeposit(r.data.minimumDepositCents))
+      .catch(() => {});
+  }, []);
   const [deposit, setDeposit] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -177,8 +184,8 @@ export default function Publish() {
             type="number"
             label="Deposit (USD)"
             required
-            inputProps={{ min: 0.01, step: 0.01 }}
-            helperText="Must be greater than zero and no more than the total price."
+            inputProps={{ min: minimumDeposit / 100, step: 0.01 }}
+            helperText={`Minimum $${(minimumDeposit / 100).toFixed(2)}; no more than the total price.`}
           />
         )}
         <Alert severity="info">{cancellation}</Alert>

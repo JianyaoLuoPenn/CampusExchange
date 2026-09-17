@@ -20,6 +20,8 @@ public class CampusController {
     return Map.of(
         "paymentMode",
         gateway.mode(),
+        "minimumDepositCents",
+        "stripe".equals(gateway.mode()) ? 50 : 1,
         "currency",
         "USD",
         "cancellationRule",

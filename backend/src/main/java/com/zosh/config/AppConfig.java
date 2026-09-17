@@ -19,7 +19,18 @@ public class AppConfig {
   SecurityFilterChain security(HttpSecurity http, @Value("${campus.frontend-url}") String origin)
       throws Exception {
     CorsConfiguration cors = new CorsConfiguration();
-    cors.setAllowedOrigins(List.of(origin));
+    java.net.URI uri = java.net.URI.create(origin);
+    java.util.ArrayList<String> allowed = new java.util.ArrayList<>(List.of(origin));
+    // Only add the equivalent local development host; never permit arbitrary origins.
+    String alias =
+        "localhost".equals(uri.getHost())
+            ? "127.0.0.1"
+            : "127.0.0.1".equals(uri.getHost()) ? "localhost" : null;
+    if (alias != null)
+      allowed.add(
+          new java.net.URI(uri.getScheme(), null, alias, uri.getPort(), null, null, null)
+              .toString());
+    cors.setAllowedOrigins(allowed);
     cors.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
     cors.setAllowedHeaders(List.of("Authorization", "Content-Type"));
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

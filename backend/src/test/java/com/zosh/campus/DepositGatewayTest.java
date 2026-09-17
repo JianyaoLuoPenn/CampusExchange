@@ -117,4 +117,21 @@ class DepositGatewayTest {
     mock.validate();
     assertThat(mock.mode()).isEqualTo("mock");
   }
+
+  @Test
+  void definiteRefundRejectionIsNotMistakenForAnAmbiguousTimeout() {
+    DepositGateway g = gateway("stripe");
+    RefundCollection list = new RefundCollection();
+    list.setData(List.of());
+    com.stripe.exception.InvalidRequestException rejection =
+        mock(com.stripe.exception.InvalidRequestException.class);
+    when(rejection.getStatusCode()).thenReturn(400);
+    try (MockedStatic<Refund> stripe = mockStatic(Refund.class)) {
+      stripe.when(() -> Refund.list(anyMap(), any(RequestOptions.class))).thenReturn(list);
+      stripe
+          .when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
+          .thenThrow(rejection);
+      assertThat(g.refund(reservation()).status()).isEqualTo("failed");
+    }
+  }
 }
