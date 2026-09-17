@@ -36,12 +36,19 @@ public class MarketplaceService {
         if(u==null) throw error(401,"Sign in again"); return u;
     }
     static ResponseStatusException error(int status,String reason) { return new ResponseStatusException(HttpStatus.valueOf(status),reason); }
-    Product lock(long id) { return products.lockById(id).orElseThrow(()->error(404,"Listing not found")); }
+    Product lock(long id) {
+        Product p=products.lockById(id).orElseThrow(()->error(404,"Listing not found"));
+        em.refresh(p,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return p;
+    }
     // Every mutation locks Product first, then refreshes Reservation. This order avoids deadlocks
     // and stale snapshots under MySQL REPEATABLE READ when a competing transaction just committed.
     Reservation lockedReservation(long id) {
-        Reservation r=reservations.findById(id).orElseThrow(()->error(404,"Reservation not found"));
-        lock(r.getProduct().getId()); em.refresh(r); return r;
+        long productId=reservations.productId(id).orElseThrow(()->error(404,"Reservation not found"));
+        lock(productId);
+        Reservation r=reservations.lockById(id).orElseThrow(()->error(404,"Reservation not found"));
+        em.refresh(r,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return r;
     }
     void participant(Reservation r,User u) {
         if(!r.getBuyer().getId().equals(u.getId()) && !r.getProduct().getOwner().getId().equals(u.getId())) throw error(403,"Only transaction participants can access this reservation");
@@ -78,7 +85,7 @@ public class MarketplaceService {
         User buyer=user(email); Product p=lock(in.productId());
         if(p.getOwner()==null) throw error(404,"Listing not found");
         if(p.getOwner().getId().equals(buyer.getId())) throw error(400,"You cannot reserve your own listing");
-        if(p.getActiveReservationId()!=null) { Reservation old=reservations.findById(p.getActiveReservationId()).orElseThrow(); em.refresh(old); expire(old); }
+        if(p.getActiveReservationId()!=null) { Reservation old=reservations.lockById(p.getActiveReservationId()).orElseThrow(); em.refresh(old,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE); expire(old); }
         if(!"AVAILABLE".equals(p.getListingStatus())) throw error(409,"This item is already held or sold");
         if(!p.getPickupSlots().contains(in.pickupSlot()) || !in.pickupSlot().isAfter(clock.instant())) throw error(400,"Choose an available future pickup time");
         Order order=new Order(); order.setUser(buyer); order.setTotalItem(1); order.setOrderStatus(OrderStatus.PENDING);
