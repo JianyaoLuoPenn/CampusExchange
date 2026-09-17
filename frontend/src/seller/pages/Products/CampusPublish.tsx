@@ -1,12 +1,191 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { Link,useNavigate } from 'react-router-dom';
-import { Alert,Button,Checkbox,FormControlLabel,MenuItem,TextField } from '@mui/material';
-import { api,errorText } from '../../../campus/api';
-import { useAuth } from '../../../campus/Auth';
-import { categories,conditions,cancellation } from '../../../campus/types';
-export default function Publish(){const {user}=useAuth();const navigate=useNavigate();const [deposit,setDeposit]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setBusy(true);setError('');try{const value=(k:string)=>String(f.get(k)||'');const r=await api.post('/listings',{title:value('title'),description:value('description'),category:value('category'),condition:value('condition'),campus:value('campus'),apartment:value('apartment'),pickupArea:value('pickupArea'),pickupAddress:value('pickupAddress'),priceCents:Math.round(Number(value('price'))*100),depositCents:deposit?Math.round(Number(value('deposit'))*100):0,pickupSlots:[value('slot1'),value('slot2')].filter(Boolean).map(d=>new Date(d).toISOString()),images:value('image')?[value('image')]:[]});navigate('/listings/'+r.data.id);}catch(e){setError(errorText(e));}finally{setBusy(false);}}
- if(!user)return <section className="empty"><h1>Make room for something new</h1><Button component={Link} to="/signin">Sign in to list an item</Button></section>;
- return <section className="form-shell wide"><div className="eyebrow">ONE ITEM. A NEW CHAPTER.</div><h1>List something useful</h1><p>No business registration needed. Each listing is one unique secondhand item.</p>{error&&<Alert severity="error">{error}</Alert>}<form onSubmit={submit}><TextField name="title" label="Item title" required inputProps={{maxLength:120}}/><TextField name="description" label="Description, including any wear" multiline rows={3} required inputProps={{maxLength:2000}}/><div className="form-pair"><TextField select name="category" label="Category" defaultValue={categories[0]}>{categories.map(v=><MenuItem key={v} value={v}>{v}</MenuItem>)}</TextField><TextField select name="condition" label="Condition" defaultValue="Good">{conditions.map(v=><MenuItem key={v} value={v}>{v}</MenuItem>)}</TextField></div><div className="form-pair"><TextField name="campus" label="Campus" required inputProps={{maxLength:100}}/><TextField name="apartment" label="Apartment" required inputProps={{maxLength:100}}/></div><TextField name="pickupArea" label="Public pickup area (e.g. building lobby)" required inputProps={{maxLength:150}}/><TextField name="pickupAddress" label="Private pickup address / instructions" required helperText="Only shown to confirmed transaction participants." inputProps={{maxLength:250}}/><TextField name="image" type="url" label="Photo URL (optional, HTTPS)" inputProps={{maxLength:1000}}/><div className="form-pair"><TextField name="slot1" type="datetime-local" label="Pickup option 1 (your local time)" InputLabelProps={{shrink:true}} required/><TextField name="slot2" type="datetime-local" label="Pickup option 2 (optional)" InputLabelProps={{shrink:true}}/></div><TextField name="price" type="number" label="Total price (USD)" required inputProps={{min:0.01,max:1000000,step:0.01}}/><FormControlLabel control={<Checkbox checked={deposit} onChange={e=>setDeposit(e.target.checked)}/>} label="Require a refundable deposit"/>{deposit&&<TextField name="deposit" type="number" label="Deposit (USD)" required inputProps={{min:0.01,step:0.01}} helperText="Must be greater than zero and no more than the total price."/>}<Alert severity="info">{cancellation}</Alert><Button type="submit" variant="contained" size="large" disabled={busy}>Publish listing</Button></form></section>;
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  TextField,
+} from "@mui/material";
+import { api, errorText } from "../../../campus/api";
+import { useAuth } from "../../../campus/useAuth";
+import { categories, conditions, cancellation } from "../../../campus/types";
+export default function Publish() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [deposit, setDeposit] = useState(false),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    setBusy(true);
+    setError("");
+    try {
+      const value = (k: string) => String(f.get(k) || "");
+      const r = await api.post("/listings", {
+        title: value("title"),
+        description: value("description"),
+        category: value("category"),
+        condition: value("condition"),
+        campus: value("campus"),
+        apartment: value("apartment"),
+        pickupArea: value("pickupArea"),
+        pickupAddress: value("pickupAddress"),
+        priceCents: Math.round(Number(value("price")) * 100),
+        depositCents: deposit ? Math.round(Number(value("deposit")) * 100) : 0,
+        pickupSlots: [value("slot1"), value("slot2")]
+          .filter(Boolean)
+          .map((d) => new Date(d).toISOString()),
+        images: value("image") ? [value("image")] : [],
+      });
+      navigate("/listings/" + r.data.id);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!user)
+    return (
+      <section className="empty">
+        <h1>Make room for something new</h1>
+        <Button component={Link} to="/signin">
+          Sign in to list an item
+        </Button>
+      </section>
+    );
+  return (
+    <section className="form-shell wide">
+      <div className="eyebrow">ONE ITEM. A NEW CHAPTER.</div>
+      <h1>List something useful</h1>
+      <p>
+        No business registration needed. Each listing is one unique secondhand
+        item.
+      </p>
+      {error && <Alert severity="error">{error}</Alert>}
+      <form onSubmit={submit}>
+        <TextField
+          name="title"
+          label="Item title"
+          required
+          inputProps={{ maxLength: 120 }}
+        />
+        <TextField
+          name="description"
+          label="Description, including any wear"
+          multiline
+          rows={3}
+          required
+          inputProps={{ maxLength: 2000 }}
+        />
+        <div className="form-pair">
+          <TextField
+            select
+            name="category"
+            label="Category"
+            defaultValue={categories[0]}
+          >
+            {categories.map((v) => (
+              <MenuItem key={v} value={v}>
+                {v}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            name="condition"
+            label="Condition"
+            defaultValue="Good"
+          >
+            {conditions.map((v) => (
+              <MenuItem key={v} value={v}>
+                {v}
+              </MenuItem>
+            ))}
+          </TextField>
+        </div>
+        <div className="form-pair">
+          <TextField
+            name="campus"
+            label="Campus"
+            required
+            inputProps={{ maxLength: 100 }}
+          />
+          <TextField
+            name="apartment"
+            label="Apartment"
+            required
+            inputProps={{ maxLength: 100 }}
+          />
+        </div>
+        <TextField
+          name="pickupArea"
+          label="Public pickup area (e.g. building lobby)"
+          required
+          inputProps={{ maxLength: 150 }}
+        />
+        <TextField
+          name="pickupAddress"
+          label="Private pickup address / instructions"
+          required
+          helperText="Only shown to confirmed transaction participants."
+          inputProps={{ maxLength: 250 }}
+        />
+        <TextField
+          name="image"
+          type="url"
+          label="Photo URL (optional, HTTPS)"
+          inputProps={{ maxLength: 1000 }}
+        />
+        <div className="form-pair">
+          <TextField
+            name="slot1"
+            type="datetime-local"
+            label="Pickup option 1 (your local time)"
+            InputLabelProps={{ shrink: true }}
+            required
+          />
+          <TextField
+            name="slot2"
+            type="datetime-local"
+            label="Pickup option 2 (optional)"
+            InputLabelProps={{ shrink: true }}
+          />
+        </div>
+        <TextField
+          name="price"
+          type="number"
+          label="Total price (USD)"
+          required
+          inputProps={{ min: 0.01, max: 1000000, step: 0.01 }}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={deposit}
+              onChange={(e) => setDeposit(e.target.checked)}
+            />
+          }
+          label="Require a refundable deposit"
+        />
+        {deposit && (
+          <TextField
+            name="deposit"
+            type="number"
+            label="Deposit (USD)"
+            required
+            inputProps={{ min: 0.01, step: 0.01 }}
+            helperText="Must be greater than zero and no more than the total price."
+          />
+        )}
+        <Alert severity="info">{cancellation}</Alert>
+        <Button type="submit" variant="contained" size="large" disabled={busy}>
+          Publish listing
+        </Button>
+      </form>
+    </section>
+  );
 }

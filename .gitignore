@@ -9,3 +9,9 @@ dist/
 *.log
 *.tsbuildinfo
 .tools/
+playwright-report/
+test-results/
+# Pre-existing VS Code Hello World scaffold, not part of the imported app
+/src/
+/lib/
+/.vscode/

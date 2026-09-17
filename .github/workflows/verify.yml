@@ -1,0 +1,75 @@
+name: Verify CampusExchange
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-only-password
+          MYSQL_DATABASE: campus_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      JWT_SECRET: ci-test-only-secret-not-for-deployment-123456789
+      TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/campus_test?useSSL=false&allowPublicKeyRetrieval=true
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: test-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Verify transactions against MySQL 8.4
+        working-directory: backend
+        run: sh ./mvnw -B verify
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build and lint active campus pages
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+      - name: Start fictional demo API
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/campus_test?useSSL=false&allowPublicKeyRetrieval=true
+          DB_USER: root
+          DB_PASSWORD: test-only-password
+          PAYMENT_MODE: mock
+          DEMO_DATA: true
+        run: |
+          java -jar backend/target/Ecommerce-multi-vendor-0.0.1-SNAPSHOT.jar > /tmp/campus-api.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/campus/config; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/campus-api.log
+          exit 1
+      - name: Browser workflow
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-evidence
+          path: |
+            backend/target/surefire-reports/
+            frontend/test-results/
+            docs/screenshots/

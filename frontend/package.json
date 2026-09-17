@@ -1,13 +1,14 @@
 {
-  "name": "ecommerce-multi-vite",
+  "name": "campusexchange",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint src/main.tsx src/App.tsx src/campus src/customer/components/Navbar/Navbar.tsx src/customer/pages/Products/Products.tsx src/customer/pages/Products/ProductCard/ProductCard.tsx src/customer/pages/Products/ProductDetails/ProductDetails.tsx src/customer/pages/Account/Reservations.tsx src/seller/pages/Products/CampusPublish.tsx",
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
@@ -42,6 +44,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.9.7",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.34.1",

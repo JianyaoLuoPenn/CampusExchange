@@ -1,13 +1,54 @@
 export type User = { id: number; name: string };
-export type Listing = { id: number; title: string; description: string; category: string; condition: string;
-  campus: string; apartment: string; pickupArea: string; priceCents: number; depositCents: number;
-  status: string; ownerId: number; sellerName: string; pickupSlots: string[]; images: string[] };
-export type Booking = { id: number; product: Listing; buyerId: number; buyerName: string; status: string;
-  paymentState: string; paymentMode: string; priceCents: number; depositCents: number; balanceCents: number;
-  pickupSlot: string; expiresAt: string | null; pickupAddress: string | null; checkoutUrl: string | null };
-export const categories = ['Furniture', 'Electronics', 'Textbooks', 'Home essentials'];
-export const conditions = ['Like new', 'Good', 'Fair'];
-export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-export const time = (value: string) => new Date(value).toLocaleString(undefined, {dateStyle:'medium',timeStyle:'short'});
-export const label = (value: string) => value.toLowerCase().replaceAll('_', ' ');
-export const cancellation = 'Cancel before the seller confirms completion for a full deposit refund. Pay the remaining balance offline after inspecting the item.';
+export type Listing = {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  condition: string;
+  campus: string;
+  apartment: string;
+  pickupArea: string;
+  priceCents: number;
+  depositCents: number;
+  status: string;
+  ownerId: number;
+  sellerName: string;
+  pickupSlots: string[];
+  images: string[];
+};
+export type Booking = {
+  id: number;
+  product: Listing;
+  buyerId: number;
+  buyerName: string;
+  status: string;
+  paymentState: string;
+  paymentMode: string;
+  priceCents: number;
+  depositCents: number;
+  balanceCents: number;
+  pickupSlot: string;
+  expiresAt: string | null;
+  pickupAddress: string | null;
+  checkoutUrl: string | null;
+};
+export const categories = [
+  "Furniture",
+  "Electronics",
+  "Textbooks",
+  "Home essentials",
+];
+export const conditions = ["Like new", "Good", "Fair"];
+export const money = (cents: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    cents / 100,
+  );
+export const time = (value: string) =>
+  new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+export const label = (value: string) =>
+  value.toLowerCase().replaceAll("_", " ");
+export const cancellation =
+  "Cancel before the seller confirms completion for a full deposit refund. Pay the remaining balance offline after inspecting the item.";

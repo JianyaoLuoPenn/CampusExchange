@@ -1,14 +1,209 @@
-import { useCallback,useEffect,useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Alert,Button } from '@mui/material';
-import { api,errorText } from '../../../campus/api';
-import { useAuth } from '../../../campus/Auth';
-import { cancellation,money,time,label } from '../../../campus/types';
-import type { Booking } from '../../../campus/types';
-export default function Reservations(){const {user}=useAuth();const [items,setItems]=useState<Booking[]>([]),[error,setError]=useState(''),[busy,setBusy]=useState<number|null>(null);
- const load=useCallback(async()=>{try{const r=await api.get<Booking[]>('/reservations');setItems(r.data);}catch(e){setError(errorText(e));}},[]);
- useEffect(()=>{if(!user)return;void load();const timer=setInterval(()=>void load(),5000);return()=>clearInterval(timer);},[user,load]);
- async function action(id:number,op:string,data?:unknown){setBusy(id);setError('');try{const r=await api.post<Booking>(`/reservations/${id}/${op}`,data);if(op==='checkout'&&r.data.checkoutUrl&&r.data.status==='PENDING_PAYMENT'){window.location.assign(r.data.checkoutUrl);return;}await load();}catch(e){setError(errorText(e));}finally{setBusy(null);}}
- if(!user)return <section className="empty"><h1>Your pickups, in one place</h1><Button component={Link} to="/signin">Sign in to continue</Button></section>;
- return <><div className="page-heading"><div className="eyebrow">PLAN A GOOD HANDOFF</div><h1>My pickups</h1><p>Buying and selling, together. Payment status is confirmed by the server.</p></div>{error&&<Alert severity="error">{error}</Alert>}<p className="muted">{cancellation}</p><div className="reservations">{items.length===0&&<div className="empty">No reservations yet. Find something you love.</div>}{items.map(r=><article className="booking" key={r.id}><div className="booking-top"><div><span className="eyebrow">{r.buyerId===user.id?'BUYING':'SELLING'} · PICKUP #{r.id}</span><h2><Link to={'/listings/'+r.product.id}>{r.product.title}</Link></h2></div><span className={'status '+r.status}>{label(r.status)}</span></div><p>{time(r.pickupSlot)} · {r.product.apartment}<br/>Buyer: {r.buyerName} · Seller: {r.product.sellerName}</p><p>{r.pickupAddress?<strong>Pickup: {r.pickupAddress}</strong>:'Exact pickup address is hidden until this reservation is confirmed.'}</p><div className="booking-money"><span>Total <b>{money(r.priceCents)}</b></span><span>Deposit <b>{money(r.depositCents)}</b></span><span>Offline balance <b>{money(r.balanceCents)}</b></span></div><p><strong>{r.paymentMode==='mock'?'Simulated deposit':'Test deposit'}: {label(r.paymentState)}</strong></p>{r.status==='PENDING_PAYMENT'&&r.expiresAt&&<Alert severity="info">Pay before {time(r.expiresAt)}. Unpaid holds are automatically released.</Alert>}{r.paymentState==='REFUND_PENDING'&&<Alert severity="info">Refund processing. It is not complete yet; this page refreshes automatically.</Alert>}{r.paymentState==='REFUND_FAILED'&&<Alert severity="warning">The refund failed. Retry below; the deposit has not been refunded.</Alert>}<div className="actions">{r.status==='PENDING_PAYMENT'&&r.buyerId===user.id&&(r.paymentMode==='mock'?<><Button disabled={busy===r.id} variant="contained" onClick={()=>void action(r.id,'simulate',{success:true})}>Simulate payment success</Button><Button disabled={busy===r.id} onClick={()=>void action(r.id,'simulate',{success:false})}>Simulate failure</Button></>:<Button disabled={busy===r.id} variant="contained" onClick={()=>void action(r.id,'checkout')}>Pay test deposit</Button>)}{['PENDING_PAYMENT','RESERVED'].includes(r.status)&&<Button disabled={busy===r.id} onClick={()=>void action(r.id,'cancel')}>Cancel reservation</Button>}{r.status==='RESERVED'&&r.product.ownerId===user.id&&<Button disabled={busy===r.id} variant="contained" onClick={()=>{if(window.confirm('Confirm the item was handed over and the offline balance was settled? This completes the transaction.'))void action(r.id,'complete');}}>Confirm handoff completed</Button>}{r.paymentState==='REFUND_FAILED'&&<Button disabled={busy===r.id} onClick={()=>void action(r.id,'retry-refund')}>Retry refund</Button>}</div></article>)}</div></>;
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Alert, Button } from "@mui/material";
+import { api, errorText } from "../../../campus/api";
+import { useAuth } from "../../../campus/useAuth";
+import { cancellation, money, time, label } from "../../../campus/types";
+import type { Booking } from "../../../campus/types";
+export default function Reservations() {
+  const { user } = useAuth();
+  const [items, setItems] = useState<Booking[]>([]),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState<number | null>(null);
+  const load = useCallback(async () => {
+    try {
+      const r = await api.get<Booking[]>("/reservations");
+      setItems(r.data);
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    void load();
+    const timer = setInterval(() => void load(), 5000);
+    return () => clearInterval(timer);
+  }, [user, load]);
+  async function action(id: number, op: string, data?: unknown) {
+    setBusy(id);
+    setError("");
+    try {
+      const r = await api.post<Booking>(`/reservations/${id}/${op}`, data);
+      if (
+        op === "checkout" &&
+        r.data.checkoutUrl &&
+        r.data.status === "PENDING_PAYMENT"
+      ) {
+        window.location.assign(r.data.checkoutUrl);
+        return;
+      }
+      await load();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+  if (!user)
+    return (
+      <section className="empty">
+        <h1>Your pickups, in one place</h1>
+        <Button component={Link} to="/signin">
+          Sign in to continue
+        </Button>
+      </section>
+    );
+  return (
+    <>
+      <div className="page-heading">
+        <div className="eyebrow">PLAN A GOOD HANDOFF</div>
+        <h1>My pickups</h1>
+        <p>
+          Buying and selling, together. Payment status is confirmed by the
+          server.
+        </p>
+      </div>
+      {error && <Alert severity="error">{error}</Alert>}
+      <p className="muted">{cancellation}</p>
+      <div className="reservations">
+        {items.length === 0 && (
+          <div className="empty">
+            No reservations yet. Find something you love.
+          </div>
+        )}
+        {items.map((r) => (
+          <article className="booking" key={r.id}>
+            <div className="booking-top">
+              <div>
+                <span className="eyebrow">
+                  {r.buyerId === user.id ? "BUYING" : "SELLING"} · PICKUP #
+                  {r.id}
+                </span>
+                <h2>
+                  <Link to={"/listings/" + r.product.id}>
+                    {r.product.title}
+                  </Link>
+                </h2>
+              </div>
+              <span className={"status " + r.status}>{label(r.status)}</span>
+            </div>
+            <p>
+              {time(r.pickupSlot)} · {r.product.apartment}
+              <br />
+              Buyer: {r.buyerName} · Seller: {r.product.sellerName}
+            </p>
+            <p>
+              {r.pickupAddress ? (
+                <strong>Pickup: {r.pickupAddress}</strong>
+              ) : (
+                "Exact pickup address is hidden until this reservation is confirmed."
+              )}
+            </p>
+            <div className="booking-money">
+              <span>
+                Total <b>{money(r.priceCents)}</b>
+              </span>
+              <span>
+                Deposit <b>{money(r.depositCents)}</b>
+              </span>
+              <span>
+                Offline balance <b>{money(r.balanceCents)}</b>
+              </span>
+            </div>
+            <p>
+              <strong>
+                {r.paymentMode === "mock"
+                  ? "Simulated deposit"
+                  : "Test deposit"}
+                : {label(r.paymentState)}
+              </strong>
+            </p>
+            {r.status === "PENDING_PAYMENT" && r.expiresAt && (
+              <Alert severity="info">
+                Pay before {time(r.expiresAt)}. Unpaid holds are automatically
+                released.
+              </Alert>
+            )}
+            {r.paymentState === "REFUND_PENDING" && (
+              <Alert severity="info">
+                Refund processing. It is not complete yet; this page refreshes
+                automatically.
+              </Alert>
+            )}
+            {r.paymentState === "REFUND_FAILED" && (
+              <Alert severity="warning">
+                The refund failed. Retry below; the deposit has not been
+                refunded.
+              </Alert>
+            )}
+            <div className="actions">
+              {r.status === "PENDING_PAYMENT" &&
+                r.buyerId === user.id &&
+                (r.paymentMode === "mock" ? (
+                  <>
+                    <Button
+                      disabled={busy === r.id}
+                      variant="contained"
+                      onClick={() =>
+                        void action(r.id, "simulate", { success: true })
+                      }
+                    >
+                      Simulate payment success
+                    </Button>
+                    <Button
+                      disabled={busy === r.id}
+                      onClick={() =>
+                        void action(r.id, "simulate", { success: false })
+                      }
+                    >
+                      Simulate failure
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    disabled={busy === r.id}
+                    variant="contained"
+                    onClick={() => void action(r.id, "checkout")}
+                  >
+                    Pay test deposit
+                  </Button>
+                ))}
+              {["PENDING_PAYMENT", "RESERVED"].includes(r.status) && (
+                <Button
+                  disabled={busy === r.id}
+                  onClick={() => void action(r.id, "cancel")}
+                >
+                  Cancel reservation
+                </Button>
+              )}
+              {r.status === "RESERVED" && r.product.ownerId === user.id && (
+                <Button
+                  disabled={busy === r.id}
+                  variant="contained"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Confirm the item was handed over and the offline balance was settled? This completes the transaction.",
+                      )
+                    )
+                      void action(r.id, "complete");
+                  }}
+                >
+                  Confirm handoff completed
+                </Button>
+              )}
+              {r.paymentState === "REFUND_FAILED" && (
+                <Button
+                  disabled={busy === r.id}
+                  onClick={() => void action(r.id, "retry-refund")}
+                >
+                  Retry refund
+                </Button>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </>
+  );
 }

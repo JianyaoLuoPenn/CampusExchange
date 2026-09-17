@@ -1,4 +1,53 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root{font-family:Inter,Arial,sans-serif;color:#183c35;background:#fafbf7;font-synthesis:none}*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}button,a,input{ -webkit-tap-highlight-color:transparent }h1,h2,h3,p{margin-top:0}h1{font-size:42px;line-height:1.13;letter-spacing:-1.5px;font-weight:650}h2{font-size:25px;font-weight:600;letter-spacing:-.5px}h3{font-size:18px;font-weight:600}p{line-height:1.7}button:focus-visible,a:focus-visible{outline:3px solid #da9b42;outline-offset:4px}
+:root {
+  font-family: Inter, Arial, sans-serif;
+  color: #183c35;
+  background: #fafbf7;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1 {
+  font-size: 42px;
+  line-height: 1.13;
+  letter-spacing: -1.5px;
+  font-weight: 650;
+}
+h2 {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+p {
+  line-height: 1.7;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #da9b42;
+  outline-offset: 4px;
+}
