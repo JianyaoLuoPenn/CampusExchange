@@ -1,0 +1,8 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {"label": "CampusExchange: start all services", "type": "shell", "command": "sh scripts/start.sh", "problemMatcher": [], "options": {"cwd": "${workspaceFolder}"}},
+    {"label": "CampusExchange: diagnose startup", "type": "shell", "command": "sh scripts/doctor.sh", "problemMatcher": [], "options": {"cwd": "${workspaceFolder}"}},
+    {"label": "CampusExchange: stop services (keep data)", "type": "shell", "command": "docker compose down", "problemMatcher": [], "options": {"cwd": "${workspaceFolder}"}}
+  ]
+}

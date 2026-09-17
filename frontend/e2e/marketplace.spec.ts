@@ -56,7 +56,7 @@ test("browse, filter, publish and reserve a single item through the real API", a
   await expect(page.getByText("PRIVATE TEST ADDRESS")).toHaveCount(0);
   const buyerContext = await browser.newContext();
   const buyer = await buyerContext.newPage();
-  await buyer.goto("http://localhost:5173/signin");
+  await buyer.goto(new URL("/signin", page.url()).href);
   await buyer.getByLabel(/^Email/).fill("alex@example.test");
   await buyer.getByLabel(/^Password/).fill("CampusDemo123!");
   await buyer.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -105,4 +105,28 @@ test("browse, filter, publish and reserve a single item through the real API", a
     fullPage: true,
   });
   expect(errors).toEqual([]);
+});
+
+test("an expired saved session does not block public browsing or signing in again", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("campus-token", "expired-or-replaced-token");
+    sessionStorage.setItem(
+      "campus-user",
+      JSON.stringify({ id: 99999, name: "Old session" }),
+    );
+  });
+  await page.goto("/");
+  await expect(page.getByText("SIMULATION MODE")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Oak study desk" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Sign in", exact: true }).click();
+  await page.getByLabel(/^Email/).fill("alex@example.test");
+  await page.getByLabel(/^Password/).fill("CampusDemo123!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Sign out · Alex" }),
+  ).toBeVisible();
 });

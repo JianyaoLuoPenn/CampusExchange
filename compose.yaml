@@ -1,19 +1,58 @@
+name: campusexchange
 services:
   mysql:
     image: mysql:8.4
     environment:
       MYSQL_DATABASE: campusexchange
-      MYSQL_USER: ${DB_USER:-campus}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_USER: campus
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Run sh scripts/setup-env.sh first}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run sh scripts/setup-env.sh first}
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
     volumes:
       - campus-mysql:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/campusexchange?allowPublicKeyRetrieval=true&useSSL=false
+      DB_USER: campus
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Run sh scripts/setup-env.sh first}
+      PAYMENT_MODE: ${PAYMENT_MODE:-mock}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      HOLD_MINUTES: ${HOLD_MINUTES:-15}
+      DEMO_DATA: ${DEMO_DATA:-true}
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/api/campus/config"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 30
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:5173/api/campus/config',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 volumes:
   campus-mysql:

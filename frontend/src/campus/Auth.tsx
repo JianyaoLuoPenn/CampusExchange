@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { User } from "./types";
 import { AuthContext as Context } from "./useAuth";
@@ -10,6 +10,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+  useEffect(() => {
+    const expired = () => setUser(null);
+    window.addEventListener("campus-session-expired", expired);
+    return () => window.removeEventListener("campus-session-expired", expired);
+  }, []);
   return (
     <Context.Provider
       value={{

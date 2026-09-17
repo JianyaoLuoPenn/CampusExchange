@@ -17,33 +17,52 @@ A campus and nearby-apartment secondhand marketplace built by adapting the suppl
 
 English UI; fictional demo data. USD only. The offline balance is not collected by the platform. No real seller payouts, penalties, arbitration, AI chatbot, multi-vendor checkout or production payment claims.
 
-## Run locally
+## Run locally — recommended: Docker
 
-Prerequisites: JDK **17**, Node **22.12+**, npm, and MySQL **8.4** (or Docker Compose for the database). Maven is downloaded by the included wrapper. Use a **new database** for this adaptation.
+The complete project now builds **from source** with Java 17, Node 22 and MySQL 8.4 inside Docker. No host JDK, Maven, Node installation, prebuilt JAR, or temporary database is required. Install/open Docker Desktop and wait for its engine to be ready, then from this repository:
 
 ```sh
-cp .env.example .env
-openssl rand -hex 32
+sh scripts/start.sh
 ```
 
-Edit `.env`: put the generated value in `JWT_SECRET`, set `DB_PASSWORD` and `MYSQL_ROOT_PASSWORD`, and keep `PAYMENT_MODE=mock` for the first run. Do not commit `.env`. The example uses a localhost database; use your own MySQL credentials if you do not use Compose.
+This creates an ignored `.env` with random local credentials if one does not exist, builds the backend/frontend, starts MySQL, and waits for **all three services** to pass health checks. The frontend health check also verifies its API proxy. First startup downloads images/dependencies and can take several minutes.
+
+Open **http://localhost:5173** (or **http://127.0.0.1:5173**). Both work because the frontend uses a same-origin `/api` proxy. The API is also exposed at **http://localhost:8080/api/campus**. MySQL data persists in a named Docker volume across stops/rebuilds.
 
 ```sh
-# Terminal 1: database, then backend
-# Skip the compose command if you already created a local MySQL database/user.
-docker compose up -d mysql
+sh scripts/doctor.sh             # Environment and endpoint diagnostics; no secret values printed
+docker compose ps               # mysql/backend/frontend should be healthy
+docker compose logs -f backend  # Startup/API logs
+docker compose down            # Stop; keep your database data
+sh scripts/start.sh            # Rebuild/restart after pulling changes
+```
+
+Do not add `-v` to `docker compose down` unless you explicitly intend to delete the database. If ports are occupied, edit `DB_PORT`, `API_PORT`, `WEB_PORT` in `.env`; set `FRONTEND_URL` to match your chosen web port. The internal database connection is configured by Compose, independently of the native-development `DB_URL`.
+
+If upgrading an existing checkout, your `.env` is preserved. It must contain nonempty `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD` and a random `JWT_SECRET` of at least 32 bytes. Old environment files pointing to the previous temporary demo database are not a reproducible Docker setup; see [STARTUP.md](docs/STARTUP.md). Never commit `.env` or put Stripe secrets in `VITE_*` variables.
+
+In VS Code, use **Terminal → Run Task → CampusExchange: start all services**. The active Java entrypoint is `backend/src/main/java/com/zosh/EcommerceMultiVendorApplication.java`. The unrelated original Hello World scaffold is archived under `legacy/workspace-scaffold` and excluded from Java project discovery.
+
+### Native development (optional)
+
+Use an installed **JDK 17**, Node **22.12+** and MySQL **8.4**, with a new database. Set `JAVA_HOME` to your JDK 17 directory. The native startup script rejects an incompatible Java version with a clear message (this machine originally defaulted to Java 25).
+
+```sh
+sh scripts/setup-env.sh
+# Edit .env: DB_URL, DB_USER, DB_PASSWORD must describe your own MySQL database.
+# If using only the Compose database: docker compose up -d mysql
 sh scripts/run-backend.sh
 ```
 
+In another terminal:
+
 ```sh
-# Terminal 2: frontend
 cd frontend
-cp .env.example .env
 npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. API: **http://localhost:8080/api/campus**. If port 3306 is occupied, change Compose's host port and `DB_URL` together. The backend shell script loads the root `.env`; Spring Boot itself does not automatically read dotenv files. `frontend/.env` is read by Vite. Secrets belong only in the backend environment, never in `VITE_*` variables.
+The backend script loads root `.env`; Spring Boot itself does not read dotenv automatically. The frontend needs no `.env` for the default local API proxy. If your native API uses another port, run Vite with `API_PROXY_TARGET=http://localhost:YOUR_PORT`. `frontend/.env.example` documents optional overrides. A Docker image/preview server here is for local learning/demo, not a claim of production hosting.
 
 With `DEMO_DATA=true`, these fictional accounts are created on the first run:
 
@@ -69,7 +88,7 @@ stripe listen --forward-to localhost:8080/api/campus/webhooks/stripe
 
 Use the signing secret printed by that listener, restart the backend, then open Checkout from **My pickups**. Use a Stripe test card, such as `4242 4242 4242 4242`, a future expiry and a test CVC. A redirect to the frontend never marks a payment successful. The signed webhook triggers server-side retrieval and checks the session ID, amount, USD currency and test/live flag. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired` if configuring a test dashboard endpoint instead of the CLI.
 
-Refunds are processed by the scheduled job, with provider idempotency keys and persisted states. The UI says **refund pending** until Stripe reports success; definite failure can be retried by a participant. Keep the webhook listener and backend running. Stripe-specific minimum charge amounts still apply. This implementation was tested with SDK mocks and signed webhook fixtures; no claim of an actual Stripe sandbox transaction is made without your test keys.
+Refunds are processed by the scheduled job, with provider idempotency keys and persisted states. The UI says **refund pending** until Stripe reports success; definite failure can be retried by a participant. Keep the webhook listener and backend running. USD deposits in Stripe mode are validated against its $0.50 minimum (mock mode still permits one cent). This implementation was tested with SDK mocks and signed webhook fixtures; no claim of an actual Stripe sandbox transaction is made without your test keys.
 
 Provider references: [Stripe webhook verification and retries](https://docs.stripe.com/webhooks), [Checkout Session](https://docs.stripe.com/api/checkout/sessions), [Refunds](https://docs.stripe.com/api/refunds), [Idempotent requests](https://docs.stripe.com/api/idempotent_requests).
 

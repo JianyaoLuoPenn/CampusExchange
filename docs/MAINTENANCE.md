@@ -29,3 +29,13 @@ Final verification: 24 backend tests passed on local H2 and MySQL; GitHub Action
 ## 2026-09-16 — Local demo process during rebuild
 
 A screenshot rerun after rebuilding the same JAR that the demo JVM had open failed with `NoClassDefFoundError`. The earlier clean browser/CI runs had passed. Restarted the demo from a separate stable JAR copy rather than overwriting an in-use artifact; documented this deployment lesson rather than treating the failure as a payment/auth regression. The mobile screenshot test now waits for product cards, not just the static hero, before checking overflow and capturing evidence.
+
+## 2026-09-17 — Re-audit of local startup and delivery
+
+The user reported that local startup/GitHub delivery did not feel complete. Confirmed the private repository existed and its CI passed, but the native demonstration depended on temporary JDK/MySQL state, the host defaulted to Java 25, Docker was stopped, and VS Code still targeted Hello World. Added source-built Java 17/Node 22/MySQL 8.4 Compose services, environment setup/diagnosis scripts, explicit startup health checks and appropriate IDE entrypoints.
+
+A clean Docker run caught a non-root Vite temporary-directory permission failure; a subsequent browser test at 127.0.0.1 caught the strict localhost-only CORS setting. Corrected the directory ownership and allowed only the equivalent loopback alias (unrelated origins remain rejected). Added stale-session recovery so a changed/expired JWT cannot make public listings and the payment-mode banner appear offline, and verified it in a second browser test.
+
+The local native database and configuration were backed up privately before moving to persistent Docker. User/product/reservation counts were compared across migration. Backups and environment files remain ignored by Git; original temporary database files were not deleted.
+
+Additional review fixes: reject mixed mock/Stripe checkout after a mode switch; enforce Stripe's USD minimum; align photo URL storage with its 1,000-character validation; reject null photo entries and fractional cents; distinguish definite new refund request rejection from unknown network outcomes. New tests cover those defects. The new CI job builds and starts a clean Docker checkout, exercises an API transaction through the frontend proxy, recreates the containers and checks the app again.

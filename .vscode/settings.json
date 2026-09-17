@@ -1,0 +1,4 @@
+{
+  "java.import.exclusions": ["**/legacy/**", "**/node_modules/**"],
+  "java.configuration.updateBuildConfiguration": "automatic"
+}

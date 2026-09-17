@@ -14,4 +14,6 @@ test-results/
 # Pre-existing VS Code Hello World scaffold, not part of the imported app
 /src/
 /lib/
-/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/tasks.json

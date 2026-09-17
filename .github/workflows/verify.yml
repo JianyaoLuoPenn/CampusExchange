@@ -73,3 +73,24 @@ jobs:
             backend/target/surefire-reports/
             frontend/test-results/
             docs/screenshots/
+  clean-startup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the documented Docker stack from a clean checkout
+        run: sh scripts/start.sh
+      - name: Verify the app through the frontend proxy
+        run: python3 scripts/smoke.py
+      - name: Restart containers without losing the database
+        run: |
+          docker compose down
+          docker compose up -d --wait --wait-timeout 180
+          python3 scripts/smoke.py
+      - name: Capture startup diagnostics
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 100
+      - name: Stop isolated CI stack
+        if: always()
+        run: docker compose down
